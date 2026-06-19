@@ -8,7 +8,6 @@ import time
 import random
 import signal
 import argparse
-import logging
 import yaml
 import threading
 from queue import Queue
@@ -23,34 +22,6 @@ from danmu_file_source import DanmuFileSource
 from danmu_ai import DanmuAI
 from voice_danmu import VoiceDanmu
 
-# logging 配置
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s.%(msecs)03d [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
-logger = logging.getLogger("main")
-
-# SSRF 防护：允许的 API 域名白名单
-ALLOWED_API_HOSTS = {
-    "api.siliconflow.cn",
-    "api.stepfun.com",
-    "api.openai.com",
-    "localhost",
-    "127.0.0.1",
-}
-
-
-def validate_api_url(url: str):
-    """校验 API URL，防止 SSRF 注入。"""
-    from urllib.parse import urlparse
-    parsed = urlparse(url)
-    if parsed.scheme not in ("https", "http"):
-        raise ValueError(f"不支持的协议: {parsed.scheme}（只允许 https/http）")
-    hostname = parsed.hostname or ""
-    if hostname not in ALLOWED_API_HOSTS and not hostname.endswith(".openai.com"):
-        raise ValueError(f"未授权的 API 域名: {hostname}")
-
 
 def load_config(config_path: str = "config.yaml") -> dict:
     import sys as _sys
@@ -60,18 +31,7 @@ def load_config(config_path: str = "config.yaml") -> dict:
         p = Path(config_path)
     if p.exists():
         with open(p, "r", encoding="utf-8") as f:
-            cfg = yaml.safe_load(f) or {}
-        # 校验 API URL（SSRF 防护）
-        for section in ("vision_api",):
-            if section in cfg:
-                url = cfg[section].get("base_url", "")
-                if url:
-                    try:
-                        validate_api_url(url)
-                    except ValueError as e:
-                        logging.getLogger("main").warning(f"config {section}.base_url 校验失败: {e}，已禁用该功能")
-                        cfg[section]["enabled"] = False
-        return cfg
+            return yaml.safe_load(f)
     return {}
 
 
