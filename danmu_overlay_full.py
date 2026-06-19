@@ -60,6 +60,13 @@ class DanmuOverlay(QWidget):
         self.font = QFont("Microsoft YaHei", 20, QFont.Weight.Bold)
         self.font_metrics = QFontMetrics(self.font)
         self._track_last_emit: dict = {}  # track -> last emit timestamp
+        self._width_cache: dict[str, float] = {}  # 文本宽度缓存
+
+    def _text_width(self, text: str) -> float:
+        """缓存文本宽度，避免重复 QFontMetrics 计算。"""
+        if text not in self._width_cache:
+            self._width_cache[text] = self.font_metrics.horizontalAdvance(text)
+        return self._width_cache[text]
 
         # 窗口设置：全屏、无边框、置顶、工具窗口
         self.setWindowFlags(
@@ -176,7 +183,7 @@ class DanmuOverlay(QWidget):
                 track=safe_track,
                 x=float(self.engine.width),
             )
-            item.width = self.font_metrics.horizontalAdvance(d['text'])
+            item.width = self._text_width(d['text'])
             self.items.append(item)
 
         # 移动弹幕

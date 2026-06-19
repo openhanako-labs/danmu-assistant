@@ -113,7 +113,14 @@ class DanmuAI:
 - 强相关画面内容，禁止空泛
 - 风格：吐槽、夸奖、玩梗、惊讶 混合
 - 像真人发的，不要 AI 腔
-- 直接输出内容，每行一条，不要编号不要解释"""
+
+【输出格式（严格遵循）】
+直接输出弹幕内容，每行一条。
+禁止输出：解释、序号、标点包裹、引号、分析过程、总结。
+示例输出：
+这BOSS血条是假的吧
+操作变形了哈哈哈
+这剧情刀我"""
 
         avoid = ""
         if recent_danmu:
@@ -215,7 +222,7 @@ class DanmuAI:
             print(f'[voice-ai] 生成失败: {e}', flush=True)
             return ""
 
-    def _capture_screen_b64(self, max_size=(1280, 720), quality=75) -> str:
+    def _capture_screen_b64(self, max_size=(640, 360), quality=60) -> str:
         """截屏 → 压缩 → base64。复用于 AI 截屏弹幕和语音弹幕。"""
         import mss
         from PIL import Image
