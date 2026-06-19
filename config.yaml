@@ -35,7 +35,7 @@ voice:
   chunk_duration: 1.5
   silence_threshold: 0.01
   min_voice_ratio: 0.1
-  whisper_model: tiny
+  whisper_model: base
   device: cpu
   compute_type: int8
   # ASR API 扩展（留空 = 不用远程 API）

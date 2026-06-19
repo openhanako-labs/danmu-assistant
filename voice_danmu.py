@@ -113,16 +113,52 @@ class VoiceDanmu:
             return "faster-whisper"
         return "无"
 
+    def _pick_input_device(self, preferred_sr: int):
+        """自动选择输入设备和采样率。优先 WASAPI，其次默认。"""
+        # 找第一个有效的输入设备
+        input_devices = [
+            (i, sd.query_devices(i, 'input'))
+            for i in range(sd.query_devices())
+            if sd.query_devices(i, 'input')['max_input_channels'] > 0
+        ]
+
+        if not input_devices:
+            raise RuntimeError("没有找到可用的麦克风设备")
+
+        # 优先 WASAPI（低延迟）
+        wasapi_devices = [(i, d) for i, d in input_devices if 'WASAPI' in d['hostapi']]
+        if wasapi_devices:
+            dev_id, dev = wasapi_devices[0]
+            default_sr = int(dev.get('default_samplerate', 48000))
+            # 如果配置的采样率不支持，用设备默认的
+            if preferred_sr == default_sr:
+                return dev_id, preferred_sr
+            # 尝试配置的，不行就用默认的
+            try:
+                with sd.InputStream(device=dev_id, samplerate=preferred_sr, channels=1, dtype='float32'):
+                    pass
+                return dev_id, preferred_sr
+            except Exception:
+                return dev_id, default_sr
+
+        # fallback：第一个输入设备
+        dev_id, dev = input_devices[0]
+        default_sr = int(dev.get('default_samplerate', 16000))
+        return dev_id, default_sr
+
     def _loop(self):
         """后台循环：录音 → 识别 → 回调。"""
         voice_cfg = self.config.get("voice", {})
-        sample_rate = voice_cfg.get("sample_rate", 48000)
+        configured_sr = voice_cfg.get("sample_rate", 48000)
         channels = voice_cfg.get("channels", 1)
         chunk_duration = voice_cfg.get("chunk_duration", 1.5)
         silence_threshold = voice_cfg.get("silence_threshold", 0.01)
         min_voice_ratio = voice_cfg.get("min_voice_ratio", 0.1)
 
+        # 自动选择设备和采样率
+        device_id, sample_rate = self._pick_input_device(configured_sr)
         chunk_samples = int(sample_rate * chunk_duration)
+        print(f'[voice] 录音设备: {sd.query_devices(device_id, "input")["name"]} ({sample_rate}Hz)', flush=True)
 
         def audio_callback(indata, frames, time_info, status):
             if status:
@@ -132,7 +168,7 @@ class VoiceDanmu:
 
         with sd.InputStream(samplerate=sample_rate, channels=channels,
                            dtype='float32', blocksize=1024,
-                           device=18,  # WASAPI 麦克风 (EDIFIER R20)
+                           device=device_id,
                            callback=audio_callback):
             buffer = []
             while self.running:

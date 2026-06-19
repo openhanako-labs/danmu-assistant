@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# 备份文件
+*.bak
+*.bak2
+*.bak3
+
+# 构建产物
+build/
+dist/
+*.spec
+*.exe
+
+# 模型缓存
+*.bin
+*.onnx
+
+# HuggingFace
+.huggingface/
+.cache/
+
+# 数据文件
+danmu_history.json
+reaction_log.json
+danmu_stats_*.txt
+
+# 临时文件
+*.tmp
+*.log
+
+# 系统文件
+Thumbs.db
+.DS_Store
