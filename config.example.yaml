@@ -1,11 +1,12 @@
-# AI 弹幕助手配置文件 v2.0
+# AI 弹幕助手配置文件模板
+# 复制此文件为 config.yaml 并填写真实值
 
 # 视觉模型 API（用于截屏弹幕）
 vision_api:
   provider: siliconflow
   base_url: https://api.siliconflow.cn/v1
   model: Qwen/Qwen3.5-397B-A17B
-  api_key: sk-jfforsvbmalqmcxvahuzxfnhppomiusvatwigwleuriwrtvc
+  api_key: sk-xxx  # 填写你的 API Key
 
 capture:
   enabled: true
@@ -38,18 +39,19 @@ voice:
   whisper_model: base
   device: cpu
   compute_type: int8
+
   # ASR API 扩展（留空 = 不用远程 API）
   asr_api:
-    provider: ""        # 可选: stepfun / openai / siliconflow
+    provider: ""
     base_url: ""
     api_key: ""
     model: ""
 
-  # whisper.cpp（本地 C++ 引擎，比 faster-whisper 快 2-3x）
+  # whisper.cpp（本地 C++ 引擎）
   whisper_cpp:
     enabled: false
-    exe_path: ""        # whisper-cli.exe 的绝对路径
-    model_path: ""      # .bin 模型文件路径
+    exe_path: ""
+    model_path: ""
     language: "zh"
     threads: 4
 

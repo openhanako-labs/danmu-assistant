@@ -347,6 +347,12 @@ class VoiceDanmu:
             return None
 
         except subprocess.TimeoutExpired:
+            txt_path = wav_path.replace(".wav", ".txt")
+            for p in (wav_path, txt_path):
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
             print('[voice] whisper.cpp 超时', flush=True)
             return None
         except Exception as e:
@@ -382,7 +388,8 @@ class VoiceDanmu:
     @staticmethod
     def _encode_wav(audio: np.ndarray, sample_rate: int) -> bytes:
         """float32 音频 → WAV bytes（PCM 16bit 单声道）。"""
-        pcm = (audio * 32767).astype("<h").tobytes()
+        pcm = np.clip(audio, -1.0, 1.0) * 32767
+        pcm = pcm.astype("<h").tobytes()
         import struct
         header = struct.pack(
             "<4sI4s4sIHHIIHH4sI",

@@ -23,10 +23,8 @@ dist/
 .huggingface/
 .cache/
 
-# 数据文件
-danmu_history.json
-reaction_log.json
-danmu_stats_*.txt
+# 敏感配置（含 API Key）
+config.yaml
 
 # 临时文件
 *.tmp

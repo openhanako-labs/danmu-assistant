@@ -147,17 +147,27 @@ def main():
         print('[main] 语音理解弹幕已启动', flush=True)
 
     # 主线程定时器：处理语音识别结果（确保PyQt操作在主线程）
+    from concurrent.futures import ThreadPoolExecutor
+    voice_executor = ThreadPoolExecutor(max_workers=2)
+
     def _process_voice_results():
         while not voice_result_queue.empty():
             try:
                 text = voice_result_queue.get_nowait()
             except queue.Empty:
                 break
-            # AI 理解生成弹幕（仍在主线程，但这里会短暂阻塞）
-            danmu_text = ai.generate_from_voice(text) if ai else ""
-            if danmu_text:
-                add_danmu(danmu_text, "voice")
-                print(f'[voice] "{text}" → "{danmu_text}"', flush=True)
+            # 异步调用 AI 生成弹幕，不阻塞主线程
+            future = voice_executor.submit(ai.generate_from_voice, text)
+            def _on_done(fut):
+                try:
+                    danmu_text = fut.result(timeout=15)
+                except Exception as e:
+                    print(f'[voice] AI 生成失败: {e}', flush=True)
+                    danmu_text = ""
+                if danmu_text:
+                    # 回到主线程发射弹幕
+                    QTimer.singleShot(0, lambda t=danmu_text: add_danmu(t, "voice"))
+            future.add_done_callback(_on_done)
 
     voice_timer = QTimer()
     voice_timer.timeout.connect(_process_voice_results)
