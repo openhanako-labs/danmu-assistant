@@ -1,0 +1,170 @@
+"""
+弹幕浮层 - PyQt6 版（不透明黑色背景 + 多轨道）
+"""
+import sys
+import time
+import threading
+from dataclasses import dataclass, field
+from typing import Optional
+from collections import deque
+
+from PyQt6.QtWidgets import QWidget, QApplication
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter
+
+
+class DanmuEngine:
+    def __init__(self, width: int = 600, height: int = 80, tracks: int = 3):
+        self.width = width
+        self.height = height
+        self.tracks = tracks
+        self.track_height = height // tracks
+        self.queue: deque = deque()
+        self.running = True
+
+    def add_danmu(self, content: str, color: str = "#ffffff", track: int = 0):
+        speed = 1.5 + abs(hash(content)) % 3  # 1.5~4.5 px/frame
+        self.queue.append({
+            "text": content, "color": color,
+            "speed": speed, "track": track % self.tracks
+        })
+
+    def drain(self) -> list:
+        items = []
+        while self.queue:
+            items.append(self.queue.popleft())
+        return items
+
+
+@dataclass
+class RenderItem:
+    text: str = ""
+    color: str = "#ffffff"
+    speed: float = 3.0
+    track: int = 0
+    x: float = 0.0
+    width: float = 0.0
+    visible: bool = True
+
+
+class DanmuOverlay(QWidget):
+    """不透明黑色背景的弹幕浮层。"""
+
+    def __init__(self, engine: DanmuEngine):
+        super().__init__()
+        self.engine = engine
+        self.items: list[RenderItem] = []
+        self.font = QFont("Microsoft YaHei", 18, QFont.Weight.Bold)
+        self.font_metrics = QFontMetrics(self.font)
+        self._texture_cache: dict = {}
+
+        # 窗口设置
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+
+        # 定时器
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._tick)
+        self.timer.start(16)  # ~60fps
+
+    def show_for_screen(self, x: int = 600, y: int = 400):
+        self.setFixedSize(self.engine.width, self.engine.height)
+        self.move(x, y)
+        self.show()
+        self.raise_()  # 确保在最上层
+
+    def _get_track_y(self, track: int) -> int:
+        th = self.engine.track_height
+        return track * th + th // 2
+
+    def _tick(self):
+        if not self.isVisible():
+            return
+
+        # 从队列添加新弹幕
+        batch = self.engine.drain()
+        for d in batch:
+            item = RenderItem(
+                text=d['text'],
+                color=d['color'],
+                speed=d['speed'],
+                track=d['track'],
+                x=float(self.engine.width),
+            )
+            item.width = self.font_metrics.horizontalAdvance(d['text'])
+            self.items.append(item)
+
+        # 移动所有弹幕
+        for item in self.items[:]:
+            item.x -= item.speed
+            if item.x < -(item.width + 100):
+                item.visible = False
+
+        # 清理消失的弹幕
+        self.items = [i for i in self.items if i.visible]
+
+        # 重绘
+        if self.items:
+            self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+
+        # 黑色半透明背景
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 180))
+
+        # 绘制弹幕（按轨道分组）
+        for item in self.items:
+            y = self._get_track_y(item.track)
+            # 阴影
+            painter.setPen(QColor(0, 0, 0, 220))
+            painter.setFont(self.font)
+            painter.drawText(int(item.x) + 2, y + 2, item.text)
+            # 正文
+            rgb = self._hex_to_rgb(item.color)
+            painter.setPen(QColor(*rgb))
+            painter.drawText(int(item.x), y, item.text)
+
+        painter.end()
+
+    def _hex_to_rgb(self, hex_color: str) -> tuple:
+        h = hex_color.lstrip('#')
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+    def add_danmu(self, content: str, color: str = "#ffffff", track: int = 0):
+        self.engine.add_danmu(content, color, track)
+
+    def stop(self):
+        self.engine.running = False
+        self.timer.stop()
+        self.close()
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    engine = DanmuEngine(600, 80, tracks=3)
+    overlay = DanmuOverlay(engine)
+    overlay.show_for_screen(600, 400)
+
+    def test():
+        time.sleep(2)
+        overlay.add_danmu("黄色弹幕", "#ffff00", 0)
+        time.sleep(0.5)
+        overlay.add_danmu("绿色弹幕", "#00ff88", 1)
+        time.sleep(0.5)
+        overlay.add_danmu("红色弹幕", "#ff4444", 2)
+        time.sleep(0.5)
+        overlay.add_danmu("蓝色弹幕", "#4488ff", 0)
+        time.sleep(0.5)
+        overlay.add_danmu("白色弹幕", "#ffffff", 1)
+
+    threading.Thread(target=test, daemon=True).start()
+
+    sys.exit(app.exec())

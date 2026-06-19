@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 弹幕助手 · 配置中心 v2.0</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+  }
+  .container { width: 100%; max-width: 640px; }
+  h1 {
+    text-align: center; font-size: 28px; margin-bottom: 8px;
+    background: linear-gradient(90deg, #4facfe, #00f2fe);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .subtitle { text-align: center; color: #888; font-size: 13px; margin-bottom: 32px; }
+  .card {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 24px; margin-bottom: 20px; backdrop-filter: blur(10px);
+  }
+  .card h2 {
+    font-size: 16px; margin-bottom: 16px; color: #4facfe;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card h2 .icon { font-size: 20px; }
+  .form-row { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
+  .form-row label { flex: 0 0 120px; font-size: 14px; color: #aaa; }
+  .form-row input, .form-row select {
+    flex: 1; padding: 8px 12px; border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; background: rgba(0,0,0,0.3); color: #e0e0e0;
+    font-size: 14px; outline: none; transition: border-color 0.2s;
+  }
+  .form-row input:focus { border-color: #4facfe; }
+  .form-row input[type="range"] {
+    padding: 0; -webkit-appearance: none; height: 6px; border-radius: 3px;
+    background: rgba(255,255,255,0.15); border: none;
+  }
+  .form-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: #4facfe; cursor: pointer;
+  }
+  .range-value { flex: 0 0 50px; text-align: right; font-size: 13px; color: #4facfe; font-weight: bold; }
+  .checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .checkbox-row input[type="checkbox"] { accent-color: #4facfe; width: 16px; height: 16px; }
+  .checkbox-row label { font-size: 14px; color: #ccc; }
+  .btn-group { display: flex; gap: 12px; margin-top: 24px; }
+  .btn {
+    flex: 1; padding: 12px 24px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: bold; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, #4facfe, #00f2fe); color: #000;
+    box-shadow: 0 4px 15px rgba(79,172,254,0.3);
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.1); color: #ccc;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .toast {
+    position: fixed; bottom: 30px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(79,172,254,0.9); color: #000;
+    padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: bold;
+    opacity: 0; transition: all 0.3s ease; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .api-key-input { font-family: 'Consolas', monospace; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎯 AI 弹幕助手</h1>
+  <p class="subtitle">v2.0 实时流式模式 · 配置保存在 config.yaml</p>
+
+  <!-- API 配置 -->
+  <div class="card">
+    <h2><span class="icon">🔑</span> API 配置</h2>
+    <div class="form-row">
+      <label>Endpoint</label>
+      <input type="text" id="api_endpoint" placeholder="https://apihub.agnes-ai.com/v1">
+    </div>
+    <div class="form-row">
+      <label>Model</label>
+      <input type="text" id="api_model" placeholder="agnes-2.0-flash">
+    </div>
+    <div class="form-row">
+      <label>API Key</label>
+      <input type="password" id="api_key" class="api-key-input" placeholder="sk-xxxxxxxxxx">
+    </div>
+  </div>
+
+  <!-- 弹幕外观 -->
+  <div class="card">
+    <h2><span class="icon">🎨</span> 弹幕外观</h2>
+    <div class="form-row">
+      <label>字体大小</label>
+      <input type="range" id="font_size" min="12" max="28" value="16">
+      <span class="range-value" id="font_size_val">16px</span>
+    </div>
+    <div class="form-row">
+      <label>轨道数量</label>
+      <input type="range" id="max_tracks" min="3" max="20" value="10">
+      <span class="range-value" id="max_tracks_val">10</span>
+    </div>
+    <div class="form-row">
+      <label>滚动速度</label>
+      <input type="range" id="scroll_speed" min="1" max="8" value="3">
+      <span class="range-value" id="scroll_speed_val">3.0</span>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="font_bold" checked>
+      <label for="font_bold">粗体显示</label>
+    </div>
+  </div>
+
+  <!-- 截屏配置 -->
+  <div class="card">
+    <h2><span class="icon">📸</span> 截屏配置</h2>
+    <div class="checkbox-row">
+      <input type="checkbox" id="capture_enabled" checked>
+      <label for="capture_enabled">启用截屏</label>
+    </div>
+    <div class="form-row">
+      <label>截屏间隔</label>
+      <input type="range" id="capture_interval" min="2" max="30" value="8">
+      <span class="range-value" id="capture_interval_val">8s</span>
+    </div>
+    <div class="form-row">
+      <label>压缩质量</label>
+      <input type="range" id="quality" min="30" max="95" value="70">
+      <span class="range-value" id="quality_val">70</span>
+    </div>
+  </div>
+
+  <!-- 语音配置 -->
+  <div class="card">
+    <h2><span class="icon">🎙️</span> 语音配置</h2>
+    <div class="checkbox-row">
+      <input type="checkbox" id="audio_enabled" checked>
+      <label for="audio_enabled">启用语音输入</label>
+    </div>
+    <div class="form-row">
+      <label>采集间隔</label>
+      <input type="range" id="audio_interval" min="5" max="60" value="15">
+      <span class="range-value" id="audio_interval_val">15s</span>
+    </div>
+  </div>
+
+  <!-- Hanako 联动 -->
+  <div class="card">
+    <h2><span class="icon">🤖</span> Hanako 联动</h2>
+    <div class="checkbox-row">
+      <input type="checkbox" id="hanako_enabled">
+      <label for="hanako_enabled">启用 Hanako 联动</label>
+    </div>
+    <div class="form-row">
+      <label>WebSocket URL</label>
+      <input type="text" id="hanako_ws_url" placeholder="ws://localhost:18789">
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="pet_enabled">
+      <label for="pet_enabled">触发桌宠反应</label>
+    </div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="btn-group">
+    <button class="btn btn-primary" onclick="saveConfig()">💾 保存配置</button>
+    <button class="btn btn-secondary" onclick="resetConfig()">↩️ 恢复默认</button>
+    <button class="btn btn-secondary" onclick="exportConfig()">📤 导出</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_CONFIG = {
+  api: { endpoint: "https://apihub.agnes-ai.com/v1", model: "agnes-2.0-flash", key: "" },
+  danmu: { font_size: 16, max_tracks: 10, scroll_speed: 3.0, font_bold: true },
+  capture: { enabled: true, interval: 8, quality: 70 },
+  audio: { enabled: true, interval: 15 },
+  hanako: { enabled: false, ws_url: "ws://localhost:18789", pet_enabled: false }
+};
+
+function loadConfig() {
+  const saved = localStorage.getItem('danmu_config');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      document.getElementById('api_endpoint').value = cfg.api?.endpoint || DEFAULT_CONFIG.api.endpoint;
+      document.getElementById('api_model').value = cfg.api?.model || DEFAULT_CONFIG.api.model;
+      document.getElementById('api_key').value = cfg.api?.key || '';
+      document.getElementById('font_size').value = cfg.danmu?.font_size || DEFAULT_CONFIG.danmu.font_size;
+      document.getElementById('max_tracks').value = cfg.danmu?.max_tracks || DEFAULT_CONFIG.danmu.max_tracks;
+      document.getElementById('scroll_speed').value = cfg.danmu?.scroll_speed || DEFAULT_CONFIG.danmu.scroll_speed;
+      document.getElementById('font_bold').checked = cfg.danmu?.font_bold ?? DEFAULT_CONFIG.danmu.font_bold;
+      document.getElementById('capture_enabled').checked = cfg.capture?.enabled ?? DEFAULT_CONFIG.capture.enabled;
+      document.getElementById('capture_interval').value = cfg.capture?.interval || DEFAULT_CONFIG.capture.interval;
+      document.getElementById('quality').value = cfg.capture?.quality || DEFAULT_CONFIG.capture.quality;
+      document.getElementById('audio_enabled').checked = cfg.audio?.enabled ?? DEFAULT_CONFIG.audio.enabled;
+      document.getElementById('audio_interval').value = cfg.audio?.interval || DEFAULT_CONFIG.audio.interval;
+      document.getElementById('hanako_enabled').checked = cfg.hanako?.enabled ?? DEFAULT_CONFIG.hanako.enabled;
+      document.getElementById('hanako_ws_url').value = cfg.hanako?.ws_url || DEFAULT_CONFIG.hanako.ws_url;
+      document.getElementById('pet_enabled').checked = cfg.hanako?.pet_enabled ?? DEFAULT_CONFIG.hanako.pet_enabled;
+      updateRangeValues();
+    } catch(e) { console.warn('加载配置失败', e); }
+  }
+}
+
+function updateRangeValues() {
+  document.getElementById('font_size_val').textContent = document.getElementById('font_size').value + 'px';
+  document.getElementById('max_tracks_val').textContent = document.getElementById('max_tracks').value;
+  document.getElementById('scroll_speed_val').textContent = parseFloat(document.getElementById('scroll_speed').value).toFixed(1);
+  document.getElementById('capture_interval_val').textContent = document.getElementById('capture_interval').value + 's';
+  document.getElementById('quality_val').textContent = document.getElementById('quality').value;
+  document.getElementById('audio_interval_val').textContent = document.getElementById('audio_interval').value + 's';
+}
+
+document.querySelectorAll('input[type="range"]').forEach(input => {
+  input.addEventListener('input', updateRangeValues);
+});
+
+function saveConfig() {
+  const config = {
+    api: {
+      endpoint: document.getElementById('api_endpoint').value.trim(),
+      model: document.getElementById('api_model').value.trim(),
+      key: document.getElementById('api_key').value.trim()
+    },
+    danmu: {
+      font_size: parseInt(document.getElementById('font_size').value),
+      max_tracks: parseInt(document.getElementById('max_tracks').value),
+      scroll_speed: parseFloat(document.getElementById('scroll_speed').value),
+      font_bold: document.getElementById('font_bold').checked
+    },
+    capture: {
+      enabled: document.getElementById('capture_enabled').checked,
+      interval: parseInt(document.getElementById('capture_interval').value),
+      quality: parseInt(document.getElementById('quality').value)
+    },
+    audio: {
+      enabled: document.getElementById('audio_enabled').checked,
+      interval: parseInt(document.getElementById('audio_interval').value)
+    },
+    hanako: {
+      enabled: document.getElementById('hanako_enabled').checked,
+      ws_url: document.getElementById('hanako_ws_url').value.trim(),
+      pet_enabled: document.getElementById('pet_enabled').checked
+    }
+  };
+  localStorage.setItem('danmu_config', JSON.stringify(config));
+  const yamlContent = generateYAML(config);
+  downloadFile('config.yaml', yamlContent);
+  showToast('✅ 配置已保存！config.yaml 已下载');
+}
+
+function generateYAML(config) {
+  return `# AI 弹幕助手配置文件 v2.0
+# 生成时间: ${new Date().toISOString()}
+
+api:
+  provider: agnes
+  endpoint: "${config.api.endpoint}"
+  model: "${config.api.model}"
+  vision_model: "${config.api.model}"
+  api_key: "${config.api.key}"
+
+capture:
+  enabled: ${config.capture.enabled}
+  screen_index: 0
+  interval: ${config.capture.interval}
+  quality: ${config.capture.quality}
+
+audio:
+  enabled: ${config.audio.enabled}
+  interval: ${config.audio.interval}
+  vad_threshold: 0.02
+
+danmu:
+  count: 5
+  max_length: 20
+  font_size: ${config.danmu.font_size}
+  max_tracks: ${config.danmu.max_tracks}
+  scroll_speed: ${config.danmu.scroll_speed}
+  font_bold: ${config.danmu.font_bold}
+
+hanako:
+  enabled: ${config.hanako.enabled}
+  ws_url: "${config.hanako.ws_url}"
+  pet_enabled: ${config.hanako.pet_enabled}
+`;
+}
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetConfig() {
+  if (!confirm('确定要恢复默认配置吗？')) return;
+  document.getElementById('api_endpoint').value = DEFAULT_CONFIG.api.endpoint;
+  document.getElementById('api_model').value = DEFAULT_CONFIG.api.model;
+  document.getElementById('api_key').value = '';
+  document.getElementById('font_size').value = DEFAULT_CONFIG.danmu.font_size;
+  document.getElementById('max_tracks').value = DEFAULT_CONFIG.danmu.max_tracks;
+  document.getElementById('scroll_speed').value = DEFAULT_CONFIG.danmu.scroll_speed;
+  document.getElementById('font_bold').checked = DEFAULT_CONFIG.danmu.font_bold;
+  document.getElementById('capture_enabled').checked = DEFAULT_CONFIG.capture.enabled;
+  document.getElementById('capture_interval').value = DEFAULT_CONFIG.capture.interval;
+  document.getElementById('quality').value = DEFAULT_CONFIG.capture.quality;
+  document.getElementById('audio_enabled').checked = DEFAULT_CONFIG.audio.enabled;
+  document.getElementById('audio_interval').value = DEFAULT_CONFIG.audio.interval;
+  document.getElementById('hanako_enabled').checked = DEFAULT_CONFIG.hanako.enabled;
+  document.getElementById('hanako_ws_url').value = DEFAULT_CONFIG.hanako.ws_url;
+  document.getElementById('pet_enabled').checked = DEFAULT_CONFIG.hanako.pet_enabled;
+  updateRangeValues();
+  localStorage.removeItem('danmu_config');
+  showToast('↩️ 已恢复默认配置');
+}
+
+function exportConfig() {
+  const saved = localStorage.getItem('danmu_config');
+  if (saved) {
+    const config = JSON.parse(saved);
+    downloadFile('danmu_config_export.json', JSON.stringify(config, null, 2));
+    showToast('📤 配置已导出');
+  } else {
+    showToast('⚠️ 暂无保存的配置');
+  }
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+loadConfig();
+</script>
+</body>
+</html>

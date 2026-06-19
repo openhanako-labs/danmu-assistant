@@ -1,0 +1,63 @@
+# -*- mode: python ; coding: utf-8 -*-
+
+a = Analysis(
+    ['main.py'],
+    pathex=[],
+    binaries=[],
+    datas=[('config.yaml', '.')],
+    hiddenimports=[
+        'PyQt6', 'PyQt6.QtWidgets', 'PyQt6.QtCore', 'PyQt6.QtGui',
+        'danmu_widget', 'danmu_stats_panel',
+        'stream_engine', 'danmu_history',
+        'emotion_recognizer', 'style_advisor',
+        'hanako_link', 'hanako_danmu_bridge',
+    ],
+    hookspath=[],
+    hooksconfig={},
+    runtime_hooks=[],
+    excludes=[
+        'PyQt5', 'PyQt5.QtWidgets', 'PyQt5.QtCore', 'PyQt5.QtGui',
+        'PyQt6.QtWebEngine', 'PyQt6.QtWebEngineWidgets', 'PyQt6.QtWebEngineCore',
+        'torch', 'torchvision', 'torchaudio', 'funasr',
+        'transformers', 'onnxruntime', 'sentencepiece',
+        'tensorflow', 'sklearn', 'scipy', 'matplotlib',
+        'pandas', 'pyarrow', 'openpyxl', 'lxml',
+        'sqlalchemy', 'rich', 'IPython', 'black',
+        'numba', 'llvmlite',
+
+        'yt_dlp', 'playwright', 'selenium', 'webdriver_manager',
+        'botocore', 'boto3', 'urllib3.contrib.emscripten',
+        'spacy', 'thinc', 'regex',
+        'modelscope', 'huggingface_hub',
+        'lightning', 'hydra', 'trimesh', 'rtree', 'umap',
+        'shapely', 'emoji', 'jieba', 'nltk',
+        'openai', 'anthropic',
+        'git', 'gitdb',
+        'wheel', 'pip',
+        'test', 'tests', '__main__',
+    ],
+    noarchive=False,
+    optimize=0,
+)
+pyz = PYZ(a.pure)
+
+exe = EXE(
+    pyz,
+    a.scripts,
+    a.binaries,
+    a.datas,
+    [],
+    name='DanmuAssistant',
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
+    console=True,
+    disable_windowed_traceback=False,
+    argv_emulation=False,
+    target_arch=None,
+    codesign_identity=None,
+    entitlements_file=None,
+)

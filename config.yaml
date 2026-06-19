@@ -1,0 +1,64 @@
+# AI 弹幕助手配置文件 v2.0
+
+# 视觉模型 API（用于截屏弹幕）
+vision_api:
+  provider: siliconflow
+  base_url: https://api.siliconflow.cn/v1
+  model: Qwen/Qwen3.5-397B-A17B
+  api_key: sk-jfforsvbmalqmcxvahuzxfnhppomiusvatwigwleuriwrtvc
+
+capture:
+  enabled: true
+  screen_index: 0
+  interval: 3
+  min_interval: 1
+  quality: 50
+
+audio:
+  enabled: true
+  interval: 15
+  vad_threshold: 0.02
+
+danmu:
+  count: 5
+  max_length: 20
+  styles:
+    meme: 0.2
+    comment: 0.4
+    reaction: 0.4
+  ai_style: pi
+
+voice:
+  enabled: true
+  sample_rate: 48000
+  channels: 1
+  chunk_duration: 1.5
+  silence_threshold: 0.01
+  min_voice_ratio: 0.1
+  whisper_model: tiny
+  device: cpu
+  compute_type: int8
+  # ASR API 扩展（留空 = 不用远程 API）
+  asr_api:
+    provider: ""        # 可选: stepfun / openai / siliconflow
+    base_url: ""
+    api_key: ""
+    model: ""
+
+  # whisper.cpp（本地 C++ 引擎，比 faster-whisper 快 2-3x）
+  whisper_cpp:
+    enabled: false
+    exe_path: ""        # whisper-cli.exe 的绝对路径
+    model_path: ""      # .bin 模型文件路径
+    language: "zh"
+    threads: 4
+
+emotion:
+  enabled: true
+  keywords: true
+
+hanako:
+  enabled: false
+  ws_url: ws://localhost:18789
+  pet_api_url: http://localhost:8080/api/pet
+  pet_enabled: false

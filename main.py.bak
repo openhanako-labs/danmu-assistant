@@ -1,0 +1,122 @@
+"""
+AI 弹幕助手 - 主入口
+模拟弹幕 + PyQt6 浮层 + PyQt6 统计面板
+"""
+import sys
+import time
+import random
+import argparse
+import yaml
+from pathlib import Path
+
+from PyQt6.QtWidgets import QApplication
+from danmu_stats_panel import DanmuStatsPanel
+from danmu_overlay_pyqt import DanmuOverlay, DanmuEngine
+
+
+def load_config(config_path: str = "config.yaml") -> dict:
+    import sys as _sys
+    base = Path(getattr(_sys, '_MEIPASS', Path(__file__).parent))
+    p = base / config_path
+    if not p.exists():
+        p = Path(config_path)
+    if p.exists():
+        with open(p, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    return {}
+
+
+DANMU_POOL = [
+    ("太帅了！", "#ff6b6b"), ("666", "#4ecdc4"), ("露西亚牛逼！", "#ffd700"),
+    ("yyds", "#ffffff"), ("这特效绝了", "#ff6b6b"), ("哈哈哈哈哈", "#4ecdc4"),
+    ("老婆！", "#ffd700"), ("太强了吧", "#ffffff"), ("卧槽", "#ff6b6b"),
+    ("绝了绝了", "#4ecdc4"), ("技能好帅", "#ffd700"), ("救命这也好看", "#ffffff"),
+    ("啊啊啊啊", "#ff6b6b"), ("泪目了", "#4ecdc4"), ("再来一次！", "#ffd700"),
+    ("无语凝噎", "#ffffff"), ("哭了", "#ff6b6b"), ("好美", "#4ecdc4"),
+    ("这操作", "#ffd700"), ("太顶了", "#ffffff"),
+]
+
+COMMON_WORDS = ["太帅了", "666", "露西亚", "yyds", "哈哈", "特效", "难过", "气死", "哭哭", "无语", "太强了", "绝了", "老婆", "技能"]
+
+
+def simulate_danmu_loop(overlay: DanmuOverlay, panel: DanmuStatsPanel, stop_event: list):
+    history_records = []
+    print("[sim] 开始模拟弹幕流...", flush=True)
+    
+    while not stop_event[0]:
+        delay = random.uniform(0.5, 2.0)
+        time.sleep(delay)
+        
+        text, color = random.choice(DANMU_POOL)
+        track = hash(text) % 3
+        overlay.add_danmu(text, color, track)
+        
+        history_records.append(text)
+        if len(history_records) > 200:
+            history_records.pop(0)
+        
+        total = len(history_records)
+        emotions = {
+            "neutral": random.randint(1, 10),
+            "happy": random.randint(1, 8),
+            "excited": random.randint(1, 5),
+        }
+        
+        words_counter = {}
+        for t in history_records[-20:]:
+            for word in COMMON_WORDS:
+                if word in t:
+                    words_counter[word] = words_counter.get(word, 0) + 1
+        words = sorted(words_counter.items(), key=lambda x: -x[1])[:5]
+        panel.update_data(total, emotions, words)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="AI 弹幕助手 v2.0")
+    parser.add_argument("--config", default="config.yaml")
+    args = parser.parse_args()
+    
+    config = load_config(args.config)
+    app = QApplication(sys.argv)
+    
+    # 弹幕浮层（600x80，屏幕中央偏下）
+    engine = DanmuEngine(600, 80, tracks=3)
+    overlay = DanmuOverlay(engine)
+    overlay.show_for_screen(600, 500)
+    print('[main] 弹幕浮层已创建', flush=True)
+    
+    # 统计面板
+    panel = DanmuStatsPanel()
+    panel.show()
+    print('[main] 统计面板已创建', flush=True)
+    
+    # 模拟弹幕线程
+    stop_event = [False]
+    sim_thread = threading.Thread(
+        target=simulate_danmu_loop,
+        args=(overlay, panel, stop_event),
+        daemon=True,
+    )
+    sim_thread.start()
+    
+    print("=" * 60)
+    print("  AI 弹幕助手 v2.0 - 模拟模式")
+    print("=" * 60)
+    print("  弹幕浮层: 已启动")
+    print("  统计面板: 已启动")
+    print("  模拟弹幕: 运行中")
+    print("=" * 60)
+    
+    try:
+        sys.exit(app.exec())
+    except KeyboardInterrupt:
+        print("\n退出中...", flush=True)
+        stop_event[0] = True
+        overlay.stop()
+        app.quit()
+
+
+import threading
+
+if __name__ == "__main__":
+    main()
