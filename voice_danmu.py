@@ -28,7 +28,7 @@ class VoiceDanmu:
         self.running = False
         self.paused = False
         self._thread = None
-        self._audio_queue = queue.Queue()
+        self._audio_queue = queue.Queue(maxsize=20)  # 最多积压20帧，防止内存爆炸
 
         # 三层识别引擎
         self.whisper = None        # faster-whisper (Python, fallback)
@@ -377,7 +377,10 @@ class VoiceDanmu:
 
     # ==================== 音频工具 ====================
 
-    def _audio_to_wav(self, audio: np.ndarray, sample_rate: int) -> bytes:
+    # ==================== 音频工具 ====================
+
+    @staticmethod
+    def _encode_wav(audio: np.ndarray, sample_rate: int) -> bytes:
         """float32 音频 → WAV bytes（PCM 16bit 单声道）。"""
         pcm = (audio * 32767).astype("<h").tobytes()
         import struct
@@ -390,21 +393,17 @@ class VoiceDanmu:
         )
         return header + pcm
 
+    def _audio_to_wav(self, audio: np.ndarray, sample_rate: int) -> bytes:
+        """float32 音频 → WAV bytes（供 API 上传）。"""
+        return self._encode_wav(audio, sample_rate)
+
     def _audio_to_wav_file(self, audio: np.ndarray, sample_rate: int) -> str:
         """float32 音频 → 临时 WAV 文件，返回路径。"""
-        pcm = (audio * 32767).astype("<h").tobytes()
-        import struct
-        header = struct.pack(
-            "<4sI4s4sIHHIIHH4sI",
-            b"RIFF", 36 + len(pcm),
-            b"WAVE", b"fmt ",
-            16, 1, 1, sample_rate, sample_rate * 2, 2, 16,
-            b"data", len(pcm),
-        )
+        wav_bytes = self._encode_wav(audio, sample_rate)
         fd, path = tempfile.mkstemp(suffix=".wav")
         try:
             with os.fdopen(fd, "wb") as f:
-                f.write(header + pcm)
+                f.write(wav_bytes)
         except Exception:
             os.close(fd)
             raise

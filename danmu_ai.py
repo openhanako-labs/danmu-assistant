@@ -196,16 +196,7 @@ class DanmuAI:
 
     def generate_from_voice(self, text: str) -> str:
         try:
-            import mss
-            from PIL import Image
-            with mss.mss() as sct:
-                primary = next((m for m in sct.monitors if m.get('is_primary')), sct.monitors[1])
-                screenshot = sct.grab(primary)
-                img = Image.frombytes('RGB', screenshot.size, screenshot.rgb)
-            img.thumbnail((640, 360), Image.Resampling.LANCZOS)
-            buf = __import__('io').BytesIO()
-            img.save(buf, format='JPEG', quality=60)
-            b64 = __import__('base64').b64encode(buf.getvalue()).decode('utf-8')
+            b64 = self._capture_screen_b64(max_size=(640, 360), quality=60)
 
             prompt = f"""玩家刚才说了一句话：「{text}」
 结合当前游戏画面，生成一条 B 站风格的弹幕回复。
@@ -223,6 +214,22 @@ class DanmuAI:
         except Exception as e:
             print(f'[voice-ai] 生成失败: {e}', flush=True)
             return ""
+
+    def _capture_screen_b64(self, max_size=(1280, 720), quality=75) -> str:
+        """截屏 → 压缩 → base64。复用于 AI 截屏弹幕和语音弹幕。"""
+        import mss
+        from PIL import Image
+        with mss.mss() as sct:
+            primary = next((m for m in sct.monitors if m.get('is_primary')), sct.monitors[1])
+            screenshot = sct.grab(primary)
+            img = Image.frombytes('RGB', screenshot.size, screenshot.rgb)
+        img.thumbnail(max_size, Image.Resampling.LANCZOS)
+        buf = __import__('io').BytesIO()
+        img.save(buf, format='JPEG', quality=quality)
+        b64 = __import__('base64').b64encode(buf.getvalue()).decode('utf-8')
+        # 立即释放内存
+        del img, buf
+        return b64
 
 
 if __name__ == "__main__":
