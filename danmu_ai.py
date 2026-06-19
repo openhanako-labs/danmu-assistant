@@ -15,7 +15,7 @@ from PIL import Image
 class DanmuAI:
     """截屏 + AI 生成弹幕。"""
 
-    def __init__(self, overlay, config: dict, interval: float = 5.0, dedup_seconds: float = 15.0):
+    def __init__(self, overlay, config: dict, interval: float = 5.0, dedup_seconds: float = 15.0, on_danmu=None):
         self.overlay = overlay
         self.config = config
         self.interval = interval
@@ -23,6 +23,7 @@ class DanmuAI:
         self._recent: list = []
         self.running = False
         self._thread = None
+        self.on_danmu = on_danmu  # 回调：发送弹幕后通知（用于统计）
 
     def start(self):
         self.running = True
@@ -84,24 +85,39 @@ class DanmuAI:
             for i, text in enumerate(valid):
                 time.sleep(0.6)
                 self.overlay.add_danmu(text)
+                if self.on_danmu:
+                    self.on_danmu(text, source="ai")
             if valid:
                 print(f'[ai] 逐条发送: {valid}', flush=True)
 
     def _get_prompt_by_style(self, style: str, recent_danmu: list = None) -> str:
-        base = """首先分析这张游戏截图：
-1. 画面里发生了什么？（场景、角色、动作、UI文字）
-2. 当前情绪/氛围是什么？（紧张、搞笑、感动、无聊）
-3. 最值得吐槽或夸奖的点是什么？
+        base = """你是一个游戏弹幕生成专家。请按以下步骤分析这张截图：
 
+【第一步：场景诊断】
+- 场景类型：战斗/探索/对话/解谜/剧情/菜单/其他
+- 核心元素：看到了什么角色/物体/文字/UI
+- 当前情绪：紧张/搞笑/感动/无聊/燃/虐/离谱
+- 情绪强度：高/中/低
+
+【第二步：弹幕策略】
+根据场景类型和情绪强度，选择弹幕角度：
+- 战斗/紧张 → 吐槽操作、喊技能名、吐槽难度
+- 探索/轻松 → 吐槽 scenery、玩梗、感叹风景
+- 对话/剧情 → 吐槽台词、吐槽角色、玩梗
+- 解谜/卡关 → 吐槽设计、求助、吐槽自己
+- 菜单/无聊 → 吐槽 UI、玩梗、吐槽等待
+
+【第三步：生成弹幕】
 基于以上分析，生成 2-3 条 B 站风格弹幕。要求：
-- 简短（5-15字），用中文
-- 要和画面内容强相关，不要空泛
-- 风格多样：吐槽、夸奖、玩梗、惊讶
+- 每条 5-15 字，用中文
+- 强相关画面内容，禁止空泛
+- 风格：吐槽、夸奖、玩梗、惊讶 混合
+- 像真人发的，不要 AI 腔
 - 直接输出内容，每行一条，不要编号不要解释"""
 
         avoid = ""
         if recent_danmu:
-            avoid = f"\n\n最近已发的弹幕（不要重复）：{', '.join(recent_danmu[-8:])}"
+            avoid = f"\n\n最近已发的弹幕（绝对不要重复或相似）：{', '.join(recent_danmu[-8:])}"
 
         styles = {
             "pi": "风格要皮、要玩梗、要吐槽，像懂行的朋友在聊天。" + avoid,
@@ -110,16 +126,17 @@ class DanmuAI:
         }
         return base + styles.get(style, styles["pi"])
 
-    def _is_similar(self, text: str, recent: list, threshold: float = 0.5) -> bool:
+    def _is_similar(self, text: str, recent: list) -> bool:
+        """检查 text 是否和 recent 里的任意一条重复或高度相似。"""
         for t, _ in recent:
+            # 完全相等
+            if text == t:
+                return True
+            # 互相包含（短句被长句包含也算重复）
             if text in t or t in text:
                 return True
-            shorter = text if len(text) < len(t) else t
-            longer = t if len(text) < len(t) else text
-            if len(shorter) == 0:
-                continue
-            overlap = sum(1 for c in shorter if c in longer) / len(shorter)
-            if overlap >= threshold:
+            # 前3字相同（防止"这个游戏太难了"和"这个游戏太难了吧"都发出来）
+            if len(text) >= 3 and len(t) >= 3 and text[:3] == t[:3]:
                 return True
         return False
 

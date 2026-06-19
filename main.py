@@ -69,14 +69,24 @@ def main():
     history = []
     start_time = datetime.now()
 
-    def record_danmu(text: str, source: str = "ai"):
+    def record_danmu(text: str, source: str = "file"):
+        """记录一条弹幕（统一数据结构）。"""
         history.append({
             "time": datetime.now().strftime("%H:%M:%S"),
             "text": text,
             "source": source,
         })
 
+    def add_danmu(text: str, source: str = "file"):
+        """通用添加弹幕 + 记录 + 更新统计。"""
+        color = random.choice(COLOR_POOL)
+        track = hash(text) % 3
+        overlay.add_danmu(text, color, track)
+        record_danmu(text, source)
+        push_stats()
+
     def push_stats():
+        """把统计数据推入队列（后台线程调用这个）。"""
         total = len(history)
         emotions = {
             "neutral": random.randint(1, 10),
@@ -84,7 +94,8 @@ def main():
             "excited": random.randint(1, 5),
         }
         words_counter = {}
-        for t in history[-20:]:
+        for h in history[-20:]:
+            t = h["text"] if isinstance(h, dict) else h
             for word in COMMON_WORDS:
                 if word in t:
                     words_counter[word] = words_counter.get(word, 0) + 1
@@ -92,6 +103,7 @@ def main():
         stats_queue.put((total, emotions, words))
 
     def _drain_stats():
+        """主线程定时调用：从队列取数据并更新面板。"""
         drained = []
         while not stats_queue.empty():
             drained.append(stats_queue.get_nowait())
@@ -102,19 +114,10 @@ def main():
     stats_timer.timeout.connect(_drain_stats)
     stats_timer.start(200)
 
-    def add_danmu(text: str):
-        color = random.choice(COLOR_POOL)
-        track = hash(text) % 3
-        overlay.add_danmu(text, color, track)
-        history.append(text)
-        if len(history) > 200:
-            history.pop(0)
-        push_stats()
-
     # === AI 截屏弹幕 ===
     ai = None
     if not args.no_ai:
-        ai = DanmuAI(overlay, config, interval=8.0)
+        ai = DanmuAI(overlay, config, interval=8.0, on_danmu=lambda text, source: add_danmu(text, source))
         ai.start()
         print('[main] AI 截屏弹幕已启动', flush=True)
 
