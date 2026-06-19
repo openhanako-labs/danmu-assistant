@@ -132,17 +132,36 @@ def main():
 
     # === 语音理解弹幕 ===
     voice = None
+    voice_result_queue = queue.Queue(maxsize=10)  # 线程安全，最多积压10条
+
     if config.get("voice", {}).get("enabled", True):
         voice = VoiceDanmu(overlay, config)
-        def on_voice_danmu(text):
-            danmu_text = ai.generate_from_voice(text) if ai else ""
-            if danmu_text:
-                overlay.add_danmu(danmu_text)
-                record_danmu(danmu_text, "voice")
-                print(f'[voice] "{text}" → "{danmu_text}"', flush=True)
-        voice.on_danmu = on_voice_danmu
+        # 回调只往队列塞文本，不碰PyQt
+        def on_voice_recognized(text: str):
+            try:
+                voice_result_queue.put_nowait(text)
+            except queue.Full:
+                pass  # 队列满则丢弃，不阻塞录音线程
+        voice.on_danmu = on_voice_recognized
         voice.start()
         print('[main] 语音理解弹幕已启动', flush=True)
+
+    # 主线程定时器：处理语音识别结果（确保PyQt操作在主线程）
+    def _process_voice_results():
+        while not voice_result_queue.empty():
+            try:
+                text = voice_result_queue.get_nowait()
+            except queue.Empty:
+                break
+            # AI 理解生成弹幕（仍在主线程，但这里会短暂阻塞）
+            danmu_text = ai.generate_from_voice(text) if ai else ""
+            if danmu_text:
+                add_danmu(danmu_text, "voice")
+                print(f'[voice] "{text}" → "{danmu_text}"', flush=True)
+
+    voice_timer = QTimer()
+    voice_timer.timeout.connect(_process_voice_results)
+    voice_timer.start(200)
 
     # === 启动信息 ===
     print("=" * 60)

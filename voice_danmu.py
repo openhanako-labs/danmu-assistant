@@ -9,6 +9,7 @@ import threading
 import queue
 import subprocess
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import sounddevice as sd
 from faster_whisper import WhisperModel
