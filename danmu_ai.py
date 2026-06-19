@@ -15,6 +15,25 @@ from PIL import Image
 class DanmuAI:
     """截屏 + AI 生成弹幕。"""
 
+    # 预置弹幕池（API 超时/失败时 fallback）
+    FALLBACK_DANMU = [
+        "这画面有点东西",
+        "操作变形了哈哈哈",
+        "策划出来挨打",
+        "这也能通关？",
+        "满屏的UI，眼花缭乱",
+        "游戏：你看我干嘛",
+        "这什么阴间设计",
+        "主播这波操作可以",
+        "弹幕：我的评价是寄",
+        "这BUG是feature吧",
+        "规则系魔法师",
+        "赛博炼丹现场",
+        "AI：我也看傻了",
+        "这关卡难度离谱",
+        "手搓高达是吧",
+    ]
+
     def __init__(self, overlay, config: dict, interval: float = 5.0, dedup_seconds: float = 15.0, on_danmu=None):
         self.overlay = overlay
         self.config = config
@@ -23,7 +42,7 @@ class DanmuAI:
         self._recent: list = []
         self.running = False
         self._thread = None
-        self.on_danmu = on_danmu  # 回调：发送弹幕后通知（用于统计）
+        self.on_danmu = on_danmu
 
     def start(self):
         self.running = True
@@ -60,14 +79,25 @@ class DanmuAI:
         recent_texts = [t for t, _ in self._recent[-10:]]
         prompt = self._get_prompt_by_style(style, recent_texts)
 
-        # 重试机制
+        # 重试机制（带退避）
         danmu_list = []
         for attempt in range(2):
-            danmu_list = self._call_vision_api(prompt, b64)
+            try:
+                danmu_list = self._call_vision_api(prompt, b64)
+            except Exception as e:
+                print(f'[ai] 第 {attempt+1} 次调用异常: {e}', flush=True)
             if danmu_list:
                 break
-            print(f'[ai] 第 {attempt+1} 次调用失败，准备重试...', flush=True)
-            time.sleep(1)
+            wait = min(2 ** attempt, 10) + 0.5
+            print(f'[ai] 第 {attempt+1} 次调用失败，{wait:.1f}秒后重试...', flush=True)
+            time.sleep(wait)
+
+        # Fallback：API 完全失败时用预置弹幕池
+        if not danmu_list:
+            import random as _random
+            fallback = _random.choice(self.FALLBACK_DANMU)
+            danmu_list = [fallback]
+            print(f'[ai] API 不可用，fallback 弹幕: {fallback}', flush=True)
 
         if danmu_list:
             now = time.time()
