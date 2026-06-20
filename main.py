@@ -174,34 +174,52 @@ def main():
 
     # === 语音理解弹幕 ===
     voice = None
-    voice_result_queue = queue.Queue(maxsize=10)  # 线程安全，最多积压10条
+    voice_result_queue = queue.Queue(maxsize=10)
+    voice_ai_result_queue = queue.Queue(maxsize=10)  # AI生成结果回主线程
 
     if config.get("voice", {}).get("enabled", True):
         voice = VoiceDanmu(overlay, config)
-        # 回调只往队列塞文本，不碰PyQt
         def on_voice_recognized(text: str):
             try:
                 voice_result_queue.put_nowait(text)
             except queue.Full:
-                pass  # 队列满则丢弃，不阻塞录音线程
+                pass
         voice.on_danmu = on_voice_recognized
         voice.start()
         print('[main] 语音理解弹幕已启动', flush=True)
 
-    # 主线程定时器：处理语音识别结果 + AI 生成弹幕
-    # 注意：AI 生成需要截屏+API，会短暂阻塞主线程 1-3 秒
+    # 主线程定时器：处理语音识别结果
+    from concurrent.futures import ThreadPoolExecutor
+    voice_executor = ThreadPoolExecutor(max_workers=2)
+
     def _process_voice_results():
+        # 先处理识别结果（提交AI生成）
         while not voice_result_queue.empty():
             try:
                 text = voice_result_queue.get_nowait()
             except queue.Empty:
                 break
-            print(f'[voice] 正在AI生成弹幕: "{text}"', flush=True)
             if ai:
-                danmu_text = ai.generate_from_voice(text)
-                print(f'[voice] AI生成结果: "{danmu_text}"', flush=True)
-                if danmu_text:
-                    add_danmu(danmu_text, "voice")
+                future = voice_executor.submit(ai.generate_from_voice, text)
+                def _on_done(fut, t=text):
+                    try:
+                        danmu_text = fut.result(timeout=15)
+                    except Exception as e:
+                        print(f'[voice] AI 生成失败: {e}', flush=True)
+                        danmu_text = ""
+                    if danmu_text:
+                        try:
+                            voice_ai_result_queue.put_nowait(danmu_text)
+                        except queue.Full:
+                            pass
+                future.add_done_callback(_on_done)
+        # 再处理AI生成结果（主线程发射弹幕）
+        while not voice_ai_result_queue.empty():
+            try:
+                danmu_text = voice_ai_result_queue.get_nowait()
+            except queue.Empty:
+                break
+            add_danmu(danmu_text, "voice")
 
     voice_timer = QTimer()
     voice_timer.timeout.connect(_process_voice_results)
