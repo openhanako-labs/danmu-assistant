@@ -126,7 +126,7 @@ class DanmuAI:
 
             for i, text in enumerate(valid):
                 time.sleep(0.6)
-                self.overlay.add_danmu(text)
+                # 只通过回调发射，避免双份
                 if self.on_danmu:
                     self.on_danmu(text, source="ai")
             if valid:
