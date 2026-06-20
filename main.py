@@ -197,16 +197,16 @@ def main():
                 text = voice_result_queue.get_nowait()
             except queue.Empty:
                 break
-            # 异步调用 AI 生成弹幕，不阻塞主线程
+            print(f'[voice] 正在AI生成弹幕: "{text}"', flush=True)
             future = voice_executor.submit(ai.generate_from_voice, text)
             def _on_done(fut):
                 try:
                     danmu_text = fut.result(timeout=15)
+                    print(f'[voice] AI生成结果: "{danmu_text}"', flush=True)
                 except Exception as e:
                     print(f'[voice] AI 生成失败: {e}', flush=True)
                     danmu_text = ""
                 if danmu_text:
-                    # 回到主线程发射弹幕
                     QTimer.singleShot(0, lambda t=danmu_text: add_danmu(t, "voice"))
             future.add_done_callback(_on_done)
 
