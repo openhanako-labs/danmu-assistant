@@ -44,7 +44,7 @@ class DanmuAI:
         self._thread = None
         self.on_danmu = on_danmu
         self._last_frame_hash: str = ""  # 关键帧检测：上一帧的均值哈希
-        self._frame_diff_threshold = 15.0  # 灰度均值差异阈值（0-255），调低让截屏更频繁
+        self._frame_diff_threshold = 255.0  # 灰度均值差异阈值，255=永远不过滤=固定截屏
 
     def start(self):
         self.running = True
