@@ -59,14 +59,8 @@ class DanmuOverlay(QWidget):
         self.items: list[RenderItem] = []
         self.font = QFont("Microsoft YaHei", 20, QFont.Weight.Bold)
         self.font_metrics = QFontMetrics(self.font)
-        self._track_last_emit: dict = {}  # track -> last emit timestamp
-        self._width_cache: dict[str, float] = {}  # 文本宽度缓存
-
-    def _text_width(self, text: str) -> float:
-        """缓存文本宽度，避免重复 QFontMetrics 计算。"""
-        if text not in self._width_cache:
-            self._width_cache[text] = self.font_metrics.horizontalAdvance(text)
-        return self._width_cache[text]
+        self._track_last_emit: dict = {}
+        self._width_cache: dict[str, float] = {}
 
         # 窗口设置：全屏、无边框、置顶、工具窗口
         self.setWindowFlags(
@@ -77,15 +71,19 @@ class DanmuOverlay(QWidget):
         # 完全透明背景
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
-        # 鼠标穿透
+        # 鼠标穿透（Win32 层处理）
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        # 样式透明
-        self.setStyleSheet("background: transparent;")
 
-        # 定时器：30fps 足够弹幕使用
+        # 定时器
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
         self.timer.start(33)  # ~30fps
+
+    def _text_width(self, text: str) -> float:
+        """缓存文本宽度。"""
+        if text not in self._width_cache:
+            self._width_cache[text] = self.font_metrics.horizontalAdvance(text)
+        return self._width_cache[text]
 
     def show_fullscreen(self):
         """铺满所有屏幕。"""

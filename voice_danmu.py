@@ -129,18 +129,22 @@ class VoiceDanmu:
 
     def _pick_input_device(self, preferred_sr: int):
         devices = sd.query_devices()
+        hostapis = sd.query_hostapis()
         input_devices = []
         for i in range(len(devices)):
             try:
                 dev = sd.query_devices(i, 'input')
                 if dev['max_input_channels'] > 0:
-                    input_devices.append((i, dev))
+                    hostapi_name = hostapis[dev['hostapi']]['name']
+                    dev_info = dict(dev)
+                    dev_info['hostapi_name'] = hostapi_name
+                    input_devices.append((i, dev_info))
             except ValueError:
-                continue  # 跳过纯输出设备
+                continue
         if not input_devices:
             raise RuntimeError("没有找到可用的麦克风设备")
 
-        wasapi = [(i, d) for i, d in input_devices if 'WASAPI' in d['hostapi']]
+        wasapi = [(i, d) for i, d in input_devices if 'WASAPI' in d.get('hostapi_name', '')]
         if wasapi:
             dev_id, dev = wasapi[0]
             default_sr = int(dev.get('default_samplerate', 48000))
