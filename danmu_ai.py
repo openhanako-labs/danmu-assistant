@@ -138,7 +138,7 @@ class DanmuAI:
 - 菜单/无聊 → 吐槽 UI、玩梗、吐槽等待
 
 【第三步：生成弹幕】
-基于以上分析，生成 2-3 条 B 站风格弹幕。要求：
+基于以上分析，随机生成 1-4 条 B 站风格弹幕。要求：
 - 每条 5-15 字，用中文
 - 强相关画面内容，禁止空泛
 - 风格：吐槽、夸奖、玩梗、惊讶 混合
@@ -225,7 +225,12 @@ class DanmuAI:
 
             content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
             lines = [l.strip() for l in content.split('\n') if l.strip() and not l.strip().startswith('#')]
-            return lines[:5]
+            # 随机取 1-4 条，更自然
+            import random as _random
+            count = min(_random.randint(1, 4), len(lines), 4)
+            if count > 0 and count < len(lines):
+                lines = _random.sample(lines, count)
+            return lines[:4]
 
         except Exception as e:
             print(f'[ai] API 调用失败: {e}', flush=True)
