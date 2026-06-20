@@ -25,8 +25,8 @@ class DanmuEngine:
         self.running = True
 
     def add_danmu(self, content: str, color: str = "#ffffff", track: int = 0):
-        # 速度 3~6 px/frame，随机差异更大
-        speed = 3.0 + abs(hash(content + str(time.time()))) % 4
+        # 速度 6~12 px/frame，超宽屏上更明显
+        speed = 6.0 + abs(hash(content + str(time.time()))) % 7
         item = {
             "text": content, "color": color,
             "speed": speed, "track": track % self.tracks
@@ -63,6 +63,7 @@ class DanmuOverlay(QWidget):
         self.font_metrics = QFontMetrics(self.font)
         self._track_last_emit: dict = {}
         self._width_cache: dict[str, float] = {}
+        self._paint_count = 0  # 调试：paintEvent 调用次数
 
         # 窗口设置：全屏、无边框、置顶、工具窗口
         self.setWindowFlags(
@@ -170,11 +171,8 @@ class DanmuOverlay(QWidget):
 
         # 添加新弹幕
         batch = self.engine.drain()
-        if batch:
-            print(f'[overlay] _tick 收到 {len(batch)} 条弹幕', flush=True)
         for d in batch:
             preferred_track = d['track']
-            # 检查该轨道上最近的弹幕距离
             safe_track = self._find_safe_track(preferred_track, d['speed'])
             item = RenderItem(
                 text=d['text'],
@@ -193,10 +191,18 @@ class DanmuOverlay(QWidget):
                 item.visible = False
         self.items = [i for i in self.items if i.visible]
 
+        # 调试：打印第一条弹幕位置
+        if self.items:
+            first = self.items[0]
+            print(f'[overlay] 第一条弹幕: x={first.x:.0f} 速度={first.speed:.1f} 文本="{first.text[:10]}"', flush=True)
+
         if self.items:
             self.update()
 
     def paintEvent(self, event):
+        self._paint_count += 1
+        if self._paint_count <= 3 or self._paint_count % 30 == 0:
+            print(f'[overlay] paintEvent #{self._paint_count} 弹幕数={len(self.items)}', flush=True)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
