@@ -76,8 +76,6 @@ class DanmuOverlay(QWidget):
         )
         # 完全透明背景
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
-        self.setAutoFillBackground(False)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
         # 鼠标穿透
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
@@ -201,7 +199,9 @@ class DanmuOverlay(QWidget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
 
-        # 完全透明，不画任何背景
+        # 全透明背景填充（防止 Windows 把未绘制区域渲染成白色）
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 0))
+
         # 只绘制弹幕文字（跳过屏幕外的）
         sw = self.engine.width
         for item in self.items:

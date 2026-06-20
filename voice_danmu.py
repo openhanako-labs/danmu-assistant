@@ -128,11 +128,15 @@ class VoiceDanmu:
     # ==================== 设备选择 ====================
 
     def _pick_input_device(self, preferred_sr: int):
-        input_devices = [
-            (i, sd.query_devices(i, 'input'))
-            for i in range(sd.query_devices())
-            if sd.query_devices(i, 'input')['max_input_channels'] > 0
-        ]
+        devices = sd.query_devices()
+        input_devices = []
+        for i in range(len(devices)):
+            try:
+                dev = sd.query_devices(i, 'input')
+                if dev['max_input_channels'] > 0:
+                    input_devices.append((i, dev))
+            except ValueError:
+                continue  # 跳过纯输出设备
         if not input_devices:
             raise RuntimeError("没有找到可用的麦克风设备")
 
