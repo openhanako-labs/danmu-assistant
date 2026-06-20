@@ -214,12 +214,16 @@ def main():
                             pass
                 future.add_done_callback(_on_done)
         # 再处理AI生成结果（主线程发射弹幕）
+        count = 0
         while not voice_ai_result_queue.empty():
             try:
                 danmu_text = voice_ai_result_queue.get_nowait()
             except queue.Empty:
                 break
+            count += 1
             add_danmu(danmu_text, "voice")
+        if count:
+            print(f'[main] 语音弹幕发射 {count} 条', flush=True)
 
     voice_timer = QTimer()
     voice_timer.timeout.connect(_process_voice_results)

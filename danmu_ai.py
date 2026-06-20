@@ -34,7 +34,7 @@ class DanmuAI:
         "手搓高达是吧",
     ]
 
-    def __init__(self, overlay, config: dict, interval: float = 5.0, dedup_seconds: float = 15.0, on_danmu=None):
+    def __init__(self, overlay, config: dict, interval: float = 5.0, dedup_seconds: float = 60.0, on_danmu=None):
         self.overlay = overlay
         self.config = config
         self.interval = interval

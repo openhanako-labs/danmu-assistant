@@ -27,12 +27,10 @@ class DanmuEngine:
     def add_danmu(self, content: str, color: str = "#ffffff", track: int = 0):
         # 速度 6~12 px/frame，超宽屏上更明显
         speed = 6.0 + abs(hash(content + str(time.time()))) % 7
-        item = {
+        self.queue.append({
             "text": content, "color": color,
             "speed": speed, "track": track % self.tracks
-        }
-        self.queue.append(item)
-        print(f'[engine] 加入队列: "{content[:15]}" 轨道={item["track"]} 速度={speed:.1f} 队列长度={len(self.queue)}', flush=True)
+        })
 
     def drain(self) -> list:
         items = []
@@ -191,18 +189,10 @@ class DanmuOverlay(QWidget):
                 item.visible = False
         self.items = [i for i in self.items if i.visible]
 
-        # 调试：打印第一条弹幕位置
-        if self.items:
-            first = self.items[0]
-            print(f'[overlay] 第一条弹幕: x={first.x:.0f} 速度={first.speed:.1f} 文本="{first.text[:10]}"', flush=True)
-
         if self.items:
             self.update()
 
     def paintEvent(self, event):
-        self._paint_count += 1
-        if self._paint_count <= 3 or self._paint_count % 30 == 0:
-            print(f'[overlay] paintEvent #{self._paint_count} 弹幕数={len(self.items)}', flush=True)
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
