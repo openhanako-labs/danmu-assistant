@@ -27,10 +27,12 @@ class DanmuEngine:
     def add_danmu(self, content: str, color: str = "#ffffff", track: int = 0):
         # 速度 3~6 px/frame，随机差异更大
         speed = 3.0 + abs(hash(content + str(time.time()))) % 4
-        self.queue.append({
+        item = {
             "text": content, "color": color,
             "speed": speed, "track": track % self.tracks
-        })
+        }
+        self.queue.append(item)
+        print(f'[engine] 加入队列: "{content[:15]}" 轨道={item["track"]} 速度={speed:.1f} 队列长度={len(self.queue)}', flush=True)
 
     def drain(self) -> list:
         items = []
@@ -166,8 +168,10 @@ class DanmuOverlay(QWidget):
         if not self.isVisible():
             return
 
-        # 添加新弹幕（带轨道防重叠）
+        # 添加新弹幕
         batch = self.engine.drain()
+        if batch:
+            print(f'[overlay] _tick 收到 {len(batch)} 条弹幕', flush=True)
         for d in batch:
             preferred_track = d['track']
             # 检查该轨道上最近的弹幕距离
