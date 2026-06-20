@@ -89,10 +89,11 @@ class VoiceDanmu:
         voice_cfg = self.config.get("voice", {})
         configured_sr = voice_cfg.get("sample_rate", 48000)
         channels = voice_cfg.get("channels", 1)
-        chunk_duration = voice_cfg.get("chunk_duration", 1.5)
+        silence_threshold = voice_cfg.get("silence_threshold", 0.005)
+        silence_duration = voice_cfg.get("silence_duration", 1.2)  # 静音1.2秒算一句话结束
+        max_buffer_duration = voice_cfg.get("max_buffer_duration", 8.0)  # 最多攒8秒
 
         device_id, sample_rate = self._pick_input_device(configured_sr)
-        chunk_samples = int(sample_rate * chunk_duration)
         print(f'[voice] 录音设备: {sd.query_devices(device_id, "input")["name"]} ({sample_rate}Hz)', flush=True)
 
         def audio_callback(indata, frames, time_info, status):
@@ -105,22 +106,70 @@ class VoiceDanmu:
         with sd.InputStream(samplerate=sample_rate, channels=channels,
                            dtype='float32', blocksize=1024,
                            device=device_id, callback=audio_callback):
-            buffer = []
+            speech_buffer: list[np.ndarray] = []
+            silence_counter = 0.0
+            is_speaking = False
+            max_samples = int(sample_rate * max_buffer_duration)
+
             while self.running:
                 try:
-                    data = self._audio_queue.get(timeout=1.0)
-                    buffer.append(data)
+                    data = self._audio_queue.get(timeout=0.1)
+                    speech_buffer.append(data)
 
-                    total_samples = sum(len(b) for b in buffer)
-                    if total_samples >= chunk_samples:
-                        audio = np.concatenate(buffer)[:chunk_samples]
-                        buffer = []
+                    # 计算当前块 RMS
+                    audio_1d = data.flatten()
+                    rms = float(np.sqrt(np.mean(audio_1d ** 2)))
 
-                        audio_1d = audio.flatten()
-                        text = self.engine.recognize(audio_1d, sample_rate) if self.engine else ""
-                        if text and self.on_danmu:
-                            self.on_danmu(text)
+                    if rms > silence_threshold:
+                        silence_counter = 0.0
+                        if not is_speaking:
+                            is_speaking = True
+                    else:
+                        silence_counter += len(audio_1d) / sample_rate
+
+                    # 检测到静音 + 有话 → 提交识别
+                    if is_speaking and silence_counter >= silence_duration:
+                        total_samples = sum(len(b) for b in speech_buffer)
+                        if total_samples > 0:
+                            audio = np.concatenate(speech_buffer)[:max_samples]
+                            text = self.engine.recognize(audio, sample_rate) if self.engine else ""
+                            if text:
+                                print(f'[voice] 识别到: "{text}"', flush=True)
+                                if self.on_danmu:
+                                    self.on_danmu(text)
+                            else:
+                                print(f'[voice] 识别为空 (缓冲{total_samples/sample_rate:.1f}秒)', flush=True)
+                        speech_buffer.clear()
+                        is_speaking = False
+                        silence_counter = 0.0
+
+                    # 防止缓冲区无限增长
+                    total_samples = sum(len(b) for b in speech_buffer)
+                    if total_samples > max_samples:
+                        audio = np.concatenate(speech_buffer)[:max_samples]
+                        text = self.engine.recognize(audio, sample_rate) if self.engine else ""
+                        if text:
+                            print(f'[voice] 识别到(超长截断): "{text}"', flush=True)
+                            if self.on_danmu:
+                                self.on_danmu(text)
+                        speech_buffer.clear()
+                        is_speaking = False
+                        silence_counter = 0.0
+
                 except queue.Empty:
+                    # 超时没数据，重置状态
+                    if is_speaking and silence_counter >= silence_duration:
+                        total_samples = sum(len(b) for b in speech_buffer)
+                        if total_samples > 0:
+                            audio = np.concatenate(speech_buffer)[:max_samples]
+                            text = self.engine.recognize(audio, sample_rate) if self.engine else ""
+                            if text:
+                                print(f'[voice] 识别到: "{text}"', flush=True)
+                                if self.on_danmu:
+                                    self.on_danmu(text)
+                        speech_buffer.clear()
+                        is_speaking = False
+                        silence_counter = 0.0
                     continue
                 except Exception as e:
                     print(f'[voice] 错误: {e}', flush=True)
