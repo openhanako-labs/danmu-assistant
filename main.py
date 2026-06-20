@@ -125,6 +125,7 @@ def main():
         overlay.add_danmu(text, color, track)
         record_danmu(text, source)
         push_stats()
+        logger.info(f'弹幕发射 [{source}]: "{text[:20]}" 轨道={track} 颜色={color}')
 
     def push_stats():
         """把统计数据推入队列（后台线程调用这个）。"""
