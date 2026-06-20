@@ -43,6 +43,8 @@ class DanmuAI:
         self.running = False
         self._thread = None
         self.on_danmu = on_danmu
+        self._last_frame_hash: str = ""  # 关键帧检测：上一帧的均值哈希
+        self._frame_diff_threshold = 5.0  # 灰度均值差异阈值（0-255），越小越严格
 
     def start(self):
         self.running = True
@@ -67,10 +69,20 @@ class DanmuAI:
             screenshot = sct.grab(primary)
             img = Image.frombytes('RGB', screenshot.size, screenshot.rgb)
 
-        img.thumbnail((1280, 720), Image.Resampling.LANCZOS)
+        # 关键帧检测：缩到 64x36 灰度，比较均值
+        small = img.resize((64, 36), Image.Resampling.LANCZOS).convert('L')
+        gray_mean = sum(small.getdata()) / len(small.getdata())
+        diff = abs(gray_mean - self._last_frame_hash) if self._last_frame_hash else 999
+        if diff < self._frame_diff_threshold:
+            return  # 画面没变，跳过 API 调用
+        self._last_frame_hash = gray_mean
+        del small
+
+        # 压缩到 640x360（减少 API 带宽）
+        img.thumbnail((640, 360), Image.Resampling.LANCZOS)
 
         buf = io.BytesIO()
-        img.save(buf, format='JPEG', quality=75)
+        img.save(buf, format='JPEG', quality=60)
         b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
         # 立即释放内存，不落盘
         del img, buf
