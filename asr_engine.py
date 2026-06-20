@@ -157,12 +157,17 @@ class FasterWhisperEngine(ASREngine):
             self._ensure_model()
             if sample_rate != 16000:
                 audio = _resample(audio, sample_rate, 16000)
-            segments, _ = self._model.transcribe(
+            segments, info = self._model.transcribe(
                 audio, beam_size=5, language="zh",
-                vad_filter=False,  # 关闭VAD，测试基础识别能力
+                vad_filter=False,
             )
             texts = [s.text.strip() for s in segments if s.text.strip()]
-            return " ".join(texts)
+            result = " ".join(texts)
+            if result:
+                print(f'[asr-whisper] 识别到: "{result}"', flush=True)
+            else:
+                print(f'[asr-whisper] 空结果 (lang={info.language}, prob={info.language_probability:.2f})', flush=True)
+            return result
         except Exception as e:
             print(f'[asr-whisper] 识别失败: {e}', flush=True)
             return ""
