@@ -159,7 +159,7 @@ def main():
     # === AI 截屏弹幕 ===
     ai = None
     if not args.no_ai:
-        ai = DanmuAI(overlay, config, interval=8.0, on_danmu=lambda text, source: add_danmu(text, source))
+        ai = DanmuAI(overlay, config, interval=6.0, on_danmu=lambda text, source: add_danmu(text, source))
         ai.start()
         print('[main] AI 截屏弹幕已启动', flush=True)
 
