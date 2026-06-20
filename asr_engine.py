@@ -159,12 +159,7 @@ class FasterWhisperEngine(ASREngine):
                 audio = _resample(audio, sample_rate, 16000)
             segments, _ = self._model.transcribe(
                 audio, beam_size=5, language="zh",
-                vad_filter=True,
-                vad_parameters=dict(
-                    min_silence_duration_ms=300,  # 静音判定从500ms降到300ms
-                    speech_pad_ms=300,           # 语音前后各多包300ms
-                    threshold=0.4,               # VAD阈值从默认0.5降到0.4，更敏感
-                ),
+                vad_filter=False,  # 关闭VAD，测试基础识别能力
             )
             texts = [s.text.strip() for s in segments if s.text.strip()]
             return " ".join(texts)
