@@ -12,6 +12,7 @@ __pycache__/
 # 构建产物
 build/
 dist/
+release/
 *.spec
 *.exe
 
