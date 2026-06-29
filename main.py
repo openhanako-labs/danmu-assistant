@@ -250,7 +250,9 @@ def main():
     def save_stats():
         end_time = datetime.now()
         duration = end_time - start_time
-        stats_path = Path(f"danmu_stats_{start_time.strftime('%Y%m%d_%H%M%S')}.txt")
+        stats_dir = Path("stats")
+        stats_dir.mkdir(exist_ok=True)
+        stats_path = stats_dir / f"danmu_stats_{start_time.strftime('%Y%m%d_%H%M%S')}.txt"
         with open(stats_path, 'w', encoding='utf-8') as f:
             f.write(f"=== AI 弹幕助手 会话统计 ===\n")
             f.write(f"开始时间: {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n")

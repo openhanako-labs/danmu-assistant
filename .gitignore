@@ -8,6 +8,7 @@ __pycache__/
 *.bak
 *.bak2
 *.bak3
+*.bak4
 
 # 构建产物
 build/
@@ -30,6 +31,12 @@ config.yaml
 # 临时文件
 *.tmp
 *.log
+
+# 统计/日志文件
+stats/
+danmu_stats_*.txt
+danmu_history.json
+reaction_log.json
 
 # 系统文件
 Thumbs.db

@@ -30,6 +30,7 @@ class DanmuStatsPanel(QWidget):
         self.total_count = 0
         self.emotion_counts = Counter()
         self.word_counts = Counter()
+        self.start_time = time.time()  # 会话开始时间，用于密度计算
         self.last_update = time.time()
         
         self._setup_ui()
@@ -100,8 +101,9 @@ class DanmuStatsPanel(QWidget):
         self._render()
     
     def _render(self):
-        elapsed = time.time() - self.last_update
-        density = self.total_count / (elapsed / 60) if self.total_count > 0 and elapsed > 0 else 0
+        # 密度 = 总弹幕数 / 运行时长(分钟)
+        elapsed_min = (time.time() - self.start_time) / 60.0
+        density = self.total_count / elapsed_min if self.total_count > 0 and elapsed_min > 0 else 0
         self.density_label.setText(f"密度: {density:.1f} 条/分")
         
         for emo, label in self.emotion_labels.items():

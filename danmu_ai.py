@@ -50,13 +50,40 @@ class DanmuAI:
         self._thread.start()
         print('[ai] 截屏+AI 弹幕生成已启动', flush=True)
 
+    def set_style(self, style: str):
+        """运行时切换弹幕风格。"""
+        valid = {"pi", "normal", "serious", "tucao", "kuakua", "wenyi", "shadiao", "lengyoumo", "fanquan"}
+        if style not in valid:
+            print(f'[ai] 未知风格 "{style}"，保持当前风格不变', flush=True)
+            return False
+        self.config["danmu_ai_style"] = style
+        print(f'[ai] 弹幕风格已切换为: {style}', flush=True)
+        return True
+
     def stop(self):
         self.running = False
+
+    @staticmethod
+    def list_styles() -> list:
+        """返回所有可用风格及其描述。"""
+        return [
+            ("pi", "玩梗/皮/吐槽（默认）"),
+            ("normal", "自然随意/普通观众"),
+            ("serious", "正经描述/教学向"),
+            ("tucao", "犀利吐槽/阴阳怪气"),
+            ("kuakua", "真诚赞美/彩虹屁"),
+            ("wenyi", "文艺诗意/氛围感"),
+            ("shadiao", "沙雕无厘头/抽象派"),
+            ("lengyoumo", "冷幽默/简短反差"),
+            ("fanquan", "饭圈化/尖叫姨母笑"),
+        ]
 
     def _loop(self):
         while self.running:
             try:
                 self._capture_and_generate()
+                # 随机切换风格，让弹幕混着飘
+                self._random_style()
             except Exception as e:
                 print(f'[ai] 错误: {e}', flush=True)
             time.sleep(self.interval)
@@ -78,6 +105,7 @@ class DanmuAI:
         style = self.config.get("danmu_ai_style", "pi")
         recent_texts = [t for t, _ in self._recent[-10:]]
         prompt = self._get_prompt_by_style(style, recent_texts)
+        self._current_style = style
 
         # 重试机制（带退避）
         danmu_list = []
@@ -120,6 +148,23 @@ class DanmuAI:
             if valid:
                 print(f'[ai] 逐条发送: {valid}', flush=True)
 
+    def _random_style(self):
+        """随机切换风格（模拟直播间多人不同口味）。"""
+        import random
+        all_styles = [s[0] for s in self.list_styles()]
+        # 从 config 里读权重（如果配了的话）
+        weights_cfg = self.config.get("danmu_ai_style_weights", None)
+        if weights_cfg:
+            weights = [weights_cfg.get(s, 1) for s in all_styles]
+            total = sum(weights)
+            if total > 0:
+                weights = [w / total for w in weights]
+            self._current_style = random.choices(all_styles, weights=weights, k=1)[0]
+        else:
+            # 默认均匀随机
+            self._current_style = random.choice(all_styles)
+        print(f'[ai] 风格切换: {self._current_style}', flush=True)
+
     def _get_prompt_by_style(self, style: str, recent_danmu: list = None) -> str:
         base = """你是一个游戏弹幕生成专家。请按以下步骤分析这张截图：
 
@@ -141,7 +186,6 @@ class DanmuAI:
 基于以上分析，随机生成 1-4 条 B 站风格弹幕。要求：
 - 每条 5-15 字，用中文
 - 强相关画面内容，禁止空泛
-- 风格：吐槽、夸奖、玩梗、惊讶 混合
 - 像真人发的，不要 AI 腔
 
 【输出格式（严格遵循）】
@@ -156,12 +200,47 @@ class DanmuAI:
         if recent_danmu:
             avoid = f"\n\n最近已发的弹幕（绝对不要重复或相似）：{', '.join(recent_danmu[-8:])}"
 
-        styles = {
-            "pi": "风格要皮、要玩梗、要吐槽，像懂行的朋友在聊天。" + avoid,
-            "normal": "风格自然随意，像普通观众在发表感想。" + avoid,
-            "serious": "风格正经一些，少玩梗，多描述画面内容。" + avoid,
+        style_prompts = {
+            "pi": (
+                "风格要皮、要玩梗、要吐槽，像懂行的朋友在聊天。\n"
+                "多用网络流行语、游戏梗、B站黑话。\n"
+                "可以阴阳怪气、可以疯狂玩梗。" + avoid
+            ),
+            "normal": (
+                "风格自然随意，像普通观众在发表感想。\n"
+                "不要太夸张，就像随手发的一条弹幕。" + avoid
+            ),
+            "serious": (
+                "风格正经一些，少玩梗，多描述画面内容。\n"
+                "适合教学/代码/严肃场景。" + avoid
+            ),
+            "tucao": (
+                "风格犀利吐槽，带点阴阳怪气。\n"
+                "专挑不合理之处开炮，毒舌但不人身攻击。" + avoid
+            ),
+            "kuakua": (
+                "风格真诚赞美，彩虹屁拉满。\n"
+                "看到高光时刻就要夸，夸到对方不好意思。" + avoid
+            ),
+            "wenyi": (
+                "风格文艺诗意，带点氛围感。\n"
+                "用词优美但不矫情，适合风景/剧情/唯美画面。" + avoid
+            ),
+            "shadiao": (
+                "风格沙雕无厘头，抽象派。\n"
+                "越离谱越好，不按套路出牌，主打一个出其不意。" + avoid
+            ),
+            "lengyoumo": (
+                "风格冷幽默，简短有力，一本正经地搞笑。\n"
+                "反差感强，字数少但杀伤力大。" + avoid
+            ),
+            "fanquan": (
+                "风格饭圈化，尖叫/姨母笑/老婆狂喊。\n"
+                "适合颜值向/角色高光/可爱画面。" + avoid
+            ),
         }
-        return base + styles.get(style, styles["pi"])
+
+        return base + style_prompts.get(style, style_prompts["pi"])
 
     def _is_similar(self, text: str, recent: list) -> bool:
         """检查 text 是否和 recent 里的任意一条重复或高度相似。"""
