@@ -1,5 +1,9 @@
 # AI 弹幕助手 v2.0
 
+
+![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
+
+
 > 月曦夜的赛博弹幕机 — 让 AI 看懂你的屏幕，听懂你的话，然后替你发弹幕。
 
 ---
