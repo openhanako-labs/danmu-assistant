@@ -220,7 +220,7 @@ python main.py
 
 ## 📄 许可
 
-个人项目，仅供学习交流。
+[GNU AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html)
 
 ---
 
