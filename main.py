@@ -27,6 +27,8 @@ from danmu_ai import DanmuAI
 from voice_danmu import VoiceDanmu
 from buddy_source import BuddyDanmuSource
 from idle_monitor import IdleMonitor
+from blivedm_client import BiliLiveClient
+from websocket_server import WSServer
 
 # logging 配置
 logging.basicConfig(
@@ -550,6 +552,7 @@ def main():
     parser.add_argument("--no-file", action="store_true", help="禁用文件弹幕源")
     parser.add_argument("--port", type=int, default=18900, help="HTTP 控制端口 (默认 18900)")
     parser.add_argument("--hana-mode", action="store_true", help="Hana 插件模式 (静默启动，无统计面板)")
+    parser.add_argument("--ws-port", type=int, default=8765, help="WebSocket 服务端口 (默认 8765)")
     args = parser.parse_args()
 
     config = load_config(args.config)
@@ -714,6 +717,24 @@ def main():
     buddy.start()
     print('[main] 伙伴弹幕已启动', flush=True)
 
+    # === B站直播弹幕 ===
+    blivedm = None
+    blivedm_cfg = config.get("blivedm", {})
+    if blivedm_cfg.get("enabled", False):
+        room_id = blivedm_cfg.get("room_id")
+        if room_id:
+            blivedm = BiliLiveClient(
+                room_id=room_id,
+                cookie=blivedm_cfg.get("cookie") or None,
+                uid=blivedm_cfg.get("uid", 0),
+                heartbeat_interval=blivedm_cfg.get("heartbeat_interval", 30.0),
+                on_danmu=lambda text, source="blivedm", user=None: add_danmu(text, source=source),
+            )
+            blivedm.start()
+            print(f'[main] B站直播弹幕已启动 (房间 {room_id})', flush=True)
+        else:
+            print('[main] blivedm.enabled 但缺少 room_id，已跳过', flush=True)
+
     # === 空闲暂停 ===
     idle_monitor = IdleMonitor(threshold_sec=config.get("idle_threshold", 600))
     def _on_idle_pause():
@@ -735,6 +756,7 @@ def main():
         "voice": voice,
         "file_source": file_source,
         "buddy": buddy,
+        "blivedm": blivedm,
         "idle_monitor": idle_monitor,
         "overlay": overlay,
         "engine": engine,
@@ -747,6 +769,11 @@ def main():
 
     # === HTTP 控制接口 ===
     http_server = start_http_server(args.port)
+
+    # === Phase 4 WebSocket 服务 ===
+    ws = WSServer(port=args.ws_port, app_state=_app_state)
+    ws.start()
+    print(f"[ws] WebSocket 服务已启动: ws://127.0.0.1:{args.ws_port}")
 
     # === 启动信息 ===
     mode_str = " [Hana 插件模式]" if args.hana_mode else ""

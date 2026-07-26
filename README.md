@@ -2,6 +2,8 @@
 
 
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)
 
 
 > 月曦夜的赛博弹幕机 — 让 AI 看懂你的屏幕，听懂你的话，然后替你发弹幕。
@@ -25,9 +27,6 @@
 | 文件弹幕源 | ✅ | 监控 `danmu_source.txt`，写入即发 |
 | 全屏透明浮层 | ✅ | PyQt6 全屏窗口，鼠标穿透，不挡操作 |
 | 防重叠 | ✅ | 10 轨道 + 时间冷却，弹幕不叠一起 |
-| 去重 | ✅ | 60 秒窗口内不重复 + 语义相似过滤 |
-| 逐条发送 | ✅ | 0.6 秒间隔，节奏自然 |
-| 随机数量 | ✅ | 每次 1-4 条随机，更自然 |
 | 去重 | ✅ | 60 秒窗口内不重复 + 语义相似过滤 |
 | 逐条发送 | ✅ | 0.6 秒间隔，节奏自然 |
 | 随机数量 | ✅ | 每次 1-4 条随机，更自然 |

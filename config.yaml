@@ -1,12 +1,11 @@
-# AI 弹幕助手配置文件模板
-# 复制此文件为 config.yaml 并填写真实值
+# AI 弹幕助手配置文件 v2.0
 
 # 视觉模型 API（用于截屏弹幕）
 vision_api:
   provider: siliconflow
   base_url: https://api.siliconflow.cn/v1
   model: Qwen/Qwen3.5-397B-A17B
-  api_key: sk-xxx  # 填写你的 API Key
+  api_key: sk-jfforsvbmalqmcxvahuzxfnhppomiusvatwigwleuriwrtvc
 
 capture:
   enabled: true
@@ -27,25 +26,46 @@ danmu:
     meme: 0.2
     comment: 0.4
     reaction: 0.4
-  ai_style: pi
+  ai_style: pi          # 初始风格（会被随机覆盖）
+  available_styles:     # 可选风格列表
+    - pi
+    - normal
+    - serious
+    - tucao
+    - kuakua
+    - wenyi
+    - shadiao
+    - lengyoumo
+    - fanquan
+  # 风格权重（每次截屏随机抽，权重决定概率）
+  # 不配则均匀随机；配了则按权重比例
+  danmu_ai_style_weights:
+    pi: 3               # 玩梗/皮 — 最常见
+    normal: 2           # 自然随意
+    serious: 1          # 正经描述
+    tucao: 2            # 犀利吐槽
+    kuakua: 1           # 真诚赞美
+    wenyi: 1            # 文艺诗意
+    shadiao: 1          # 沙雕无厘头
+    lengyoumo: 1        # 冷幽默
+    fanquan: 2          # 饭圈化
 
 voice:
   enabled: true
   sample_rate: 48000
   channels: 1
-  chunk_duration: 1.5
-  silence_threshold: 0.01
-  min_voice_ratio: 0.1
-  whisper_model: base
+  chunk_duration: 2.0
+  silence_threshold: 0.005
+  min_voice_ratio: 0.05
+  whisper_model: base      # 本地fallback（模型已删，实际走ASR API）
   device: cpu
   compute_type: int8
-
-  # ASR API 扩展（留空 = 不用远程 API）
+  # ASR API — 硅基流动 SenseVoiceSmall
   asr_api:
-    provider: ""
-    base_url: ""
-    api_key: ""
-    model: ""
+    provider: siliconflow
+    base_url: https://api.siliconflow.cn/v1
+    api_key: sk-jfforsvbmalqmcxvahuzxfnhppomiusvatwigwleuriwrtvc
+    model: FunAudioLLM/SenseVoiceSmall
 
   # whisper.cpp（本地 C++ 引擎）
   whisper_cpp:
